@@ -83,3 +83,4 @@ coverage/
 *.cert
 vercel.json
 .netlify/
+node_modules
