@@ -1,3 +1,4 @@
+
 // ============================================
 // ТИПЫ (СОВМЕСТИМЫ С SUPABASE)
 // ============================================
@@ -59,12 +60,18 @@ export interface MockDistrict {
   rating: number;
   topCategories: string[];
   image: string;
+  image_url?: string | null;
   avgPrice: string;
   trend: "up" | "down" | "stable";
+  mapX?: number;
+  mapY?: number;
+  highlights?: string[];
+  popularTags?: string[];
+  area?: string;
 }
 
 // ============================================
-// МОК-ОБЪЯВЛЕНИЯ
+// МОК-ОБЪЯВЛЕНИЯ (10 ШТУК)
 // ============================================
 
 export const mockAds: MockAd[] = [
@@ -78,7 +85,7 @@ export const mockAds: MockAd[] = [
     category_icon: "📱",
     district: "Академгородок",
     photos: [
-      "https://readdy.ai/api/search-image?query=iPhone%2015%20Pro%20Max%20titanium%20product%20photography%20white%20background&width=800&height=600&seq=ad1_1",
+      "https://readdy.ai/api/search-image?query=iPhone%2015%20Pro%20Max%20titanium%20product%20photography&width=800&height=600&seq=ad1_1",
       "https://readdy.ai/api/search-image?query=iPhone%2015%20Pro%20Max%20back%20camera%20closeup&width=800&height=600&seq=ad1_2",
       "https://readdy.ai/api/search-image?query=iPhone%2015%20Pro%20Max%20side%20titanium%20frame&width=800&height=600&seq=ad1_3",
     ],
@@ -448,10 +455,84 @@ export const mockAds: MockAd[] = [
       has_voice: false,
     },
   },
+  {
+    id: 11,
+    title: "Холодильник LG Door-in-Door",
+    price: 65000,
+    is_gift: false,
+    category_id: 10,
+    category_name: "Бытовая техника",
+    category_icon: "🧊",
+    district: "Заельцовский",
+    photos: [
+      "https://readdy.ai/api/search-image?query=LG%20Door%20in%20Door%20refrigerator%20stainless%20steel&width=800&height=600&seq=ad11_1",
+    ],
+    views: 678,
+    status: "active",
+    created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    description: "Холодильник LG с функцией Door-in-Door. Объём 600 литров. Куплен 2 года назад, в отличном состоянии. Все полки целые, морозилка работает отлично.",
+    condition_text: "Отличное",
+    story_text: "Переезжаем в новую квартиру с встроенной техникой.",
+    story_reason: "🚚 Переезд",
+    address: "ул. Заельцовская, 15",
+    geo_lat: 55.0592,
+    geo_lon: 82.9128,
+    voice_url: null,
+    seller: {
+      id: "seller-11",
+      name: "Татьяна П.",
+      avatar_url: "https://readdy.ai/api/search-image?query=russian%20woman%2040s%20portrait&width=80&height=80&seq=seller11",
+      rating: 4.8,
+      deals_count: 22,
+      badges: ["🏔️ Столбист"],
+      is_verified: true,
+      is_online: false,
+      response_time: "~45 мин",
+      has_voice: false,
+    },
+  },
+  {
+    id: 12,
+    title: "Квартира-студия в центре",
+    price: 4200000,
+    is_gift: false,
+    category_id: 2,
+    category_name: "Недвижимость",
+    category_icon: "🏠",
+    district: "Центральный",
+    photos: [
+      "https://readdy.ai/api/search-image?query=modern%20studio%20apartment%20interior%20bright%20minimalist&width=800&height=600&seq=ad12_1",
+    ],
+    views: 3456,
+    status: "active",
+    created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    updated_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    description: "Продаётся уютная студия 28 м² в центре Новосибирска. Свежий ремонт, вся мебель остаётся. Окна во двор, тихо. 5 минут до метро.",
+    condition_text: "Отличное",
+    story_text: "Переезжаю в другой город.",
+    story_reason: "🚚 Переезд",
+    address: "ул. Советская, 18",
+    geo_lat: 55.0285,
+    geo_lon: 82.9207,
+    voice_url: null,
+    seller: {
+      id: "seller-12",
+      name: "Сергей В.",
+      avatar_url: "https://readdy.ai/api/search-image?query=russian%20man%2035%20business%20portrait&width=80&height=80&seq=seller12",
+      rating: 4.9,
+      deals_count: 3,
+      badges: ["📸 Папарацци"],
+      is_verified: true,
+      is_online: true,
+      response_time: "~30 мин",
+      has_voice: true,
+    },
+  },
 ];
 
 // ============================================
-// МОК-КАТЕГОРИИ
+// МОК-КАТЕГОРИИ (12 ШТУК)
 // ============================================
 
 export const mockCategories: MockCategory[] = [
@@ -470,7 +551,7 @@ export const mockCategories: MockCategory[] = [
 ];
 
 // ============================================
-// МОК-РАЙОНЫ
+// МОК-РАЙОНЫ (ВСЕ 12 РАЙОНОВ НОВОСИБИРСКА)
 // ============================================
 
 export const mockDistricts: MockDistrict[] = [
@@ -488,6 +569,11 @@ export const mockDistricts: MockDistrict[] = [
     image: "https://readdy.ai/api/search-image?query=Akademgorodok%20Novosibirsk%20winter%20aerial&width=600&height=400",
     avgPrice: "32 400 ₽",
     trend: "up",
+    mapX: 18,
+    mapY: 72,
+    highlights: ["НГУ", "Технопарк", "Берёзовая роща"],
+    popularTags: ["наука", "тихо", "зелень"],
+    area: "Советский",
   },
   {
     id: "center",
@@ -503,6 +589,11 @@ export const mockDistricts: MockDistrict[] = [
     image: "https://readdy.ai/api/search-image?query=Novosibirsk%20Opera%20Theatre%20winter&width=600&height=400",
     avgPrice: "48 700 ₽",
     trend: "up",
+    mapX: 52,
+    mapY: 38,
+    highlights: ["Оперный театр", "Красный проспект"],
+    popularTags: ["центр", "театры", "шопинг"],
+    area: "Центральный",
   },
   {
     id: "leviy",
@@ -518,6 +609,191 @@ export const mockDistricts: MockDistrict[] = [
     image: "https://readdy.ai/api/search-image?query=Novosibirsk%20left%20bank%20Ob%20river%20winter&width=600&height=400",
     avgPrice: "28 900 ₽",
     trend: "stable",
+    mapX: 38,
+    mapY: 55,
+    highlights: ["Набережная Оби", "Парк Победы"],
+    popularTags: ["река", "парки", "семейный"],
+    area: "Кировский/Ленинский",
+  },
+  {
+    id: "zaeltsov",
+    name: "Заельцовский",
+    shortName: "Заельцово",
+    description: "Зелёный район у Заельцовского бора. Свежий воздух и тишина.",
+    icon: "🌲",
+    color: "#2E7D32",
+    residents: 987,
+    ads: 2341,
+    rating: 4.5,
+    topCategories: ["🏠 Недвижимость", "🚗 Авто", "🛋️ Мебель", "🌿 Сад"],
+    image: "https://readdy.ai/api/search-image?query=Zaeltsovsky%20bor%20Novosibirsk%20winter%20aerial&width=600&height=400",
+    avgPrice: "31 200 ₽",
+    trend: "up",
+    mapX: 68,
+    mapY: 22,
+    highlights: ["Заельцовский бор", "Зоопарк"],
+    popularTags: ["природа", "зоопарк", "дети"],
+    area: "Заельцовский",
+  },
+  {
+    id: "oktyabr",
+    name: "Октябрьский",
+    shortName: "Октябрь",
+    description: "Динамичный район с развитой инфраструктурой и новостройками.",
+    icon: "🏗️",
+    color: "#C0392B",
+    residents: 1456,
+    ads: 3678,
+    rating: 4.4,
+    topCategories: ["🏠 Недвижимость", "📱 Электроника", "🚗 Авто", "👕 Одежда"],
+    image: "https://readdy.ai/api/search-image?query=Oktyabrsky%20Novosibirsk%20new%20buildings%20winter%20aerial&width=600&height=400",
+    avgPrice: "35 600 ₽",
+    trend: "up",
+    mapX: 62,
+    mapY: 48,
+    highlights: ["ТЦ Мега", "Площадь Маркса"],
+    popularTags: ["новостройки", "метро", "инфраструктура"],
+    area: "Октябрьский",
+  },
+  {
+    id: "kirovsky",
+    name: "Кировский",
+    shortName: "Кировка",
+    description: "Промышленный район с историей. Доступное жильё и рабочий дух.",
+    icon: "🏭",
+    color: "#7F8C8D",
+    residents: 1123,
+    ads: 2890,
+    rating: 4.3,
+    topCategories: ["🚗 Авто", "🔧 Инструменты", "🛋️ Мебель", "👕 Одежда"],
+    image: "https://readdy.ai/api/search-image?query=Kirovsky%20Novosibirsk%20industrial%20winter%20aerial&width=600&height=400",
+    avgPrice: "22 100 ₽",
+    trend: "stable",
+    mapX: 28,
+    mapY: 65,
+    highlights: ["Завод Сибсельмаш", "Парк Кирова"],
+    popularTags: ["доступно", "рабочий", "история"],
+    area: "Кировский",
+  },
+  {
+    id: "pervomay",
+    name: "Первомайский",
+    shortName: "Первомай",
+    description: "Уютный спальный район с парками и хорошей транспортной доступностью.",
+    icon: "🌸",
+    color: "#E91E8C",
+    residents: 876,
+    ads: 1987,
+    rating: 4.4,
+    topCategories: ["👶 Детское", "🛋️ Мебель", "🚲 Спорт", "🌿 Сад"],
+    image: "https://readdy.ai/api/search-image?query=Pervomaysky%20Novosibirsk%20parks%20winter%20aerial&width=600&height=400",
+    avgPrice: "24 800 ₽",
+    trend: "up",
+    mapX: 15,
+    mapY: 48,
+    highlights: ["Парк Первомайский", "Площадь Калинина"],
+    popularTags: ["уютный", "парки", "семейный"],
+    area: "Первомайский",
+  },
+  {
+    id: "sovetsky",
+    name: "Советский",
+    shortName: "Советский",
+    description: "Студенческий и научный. Рядом с Академгородком, молодёжная атмосфера.",
+    icon: "🎓",
+    color: "#8E44AD",
+    residents: 1089,
+    ads: 2654,
+    rating: 4.6,
+    topCategories: ["📱 Электроника", "🎮 Игры", "👕 Одежда", "📚 Книги"],
+    image: "https://readdy.ai/api/search-image?query=Sovetsky%20Novosibirsk%20university%20winter%20aerial&width=600&height=400",
+    avgPrice: "29 300 ₽",
+    trend: "up",
+    mapX: 25,
+    mapY: 80,
+    highlights: ["НГУ кампус", "Технопарк"],
+    popularTags: ["студенты", "наука", "молодёжь"],
+    area: "Советский",
+  },
+  {
+    id: "dzerzh",
+    name: "Дзержинский",
+    shortName: "Дзержинка",
+    description: "Современный район с торговыми центрами и развитой инфраструктурой.",
+    icon: "🌆",
+    color: "#F39C12",
+    residents: 1345,
+    ads: 3210,
+    rating: 4.5,
+    topCategories: ["🏠 Недвижимость", "📱 Электроника", "🚗 Авто", "🛋️ Мебель"],
+    image: "https://readdy.ai/api/search-image?query=Dzerzhinsky%20Novosibirsk%20modern%20winter%20aerial&width=600&height=400",
+    avgPrice: "38 400 ₽",
+    trend: "up",
+    mapX: 72,
+    mapY: 35,
+    highlights: ["ТЦ Сибирский Молл", "Площадь Дзержинского"],
+    popularTags: ["шопинг", "метро", "современный"],
+    area: "Дзержинский",
+  },
+  {
+    id: "zhelezn",
+    name: "Железнодорожный",
+    shortName: "ЖД",
+    description: "Вокзал, транспортная развязка и исторический центр.",
+    icon: "🚂",
+    color: "#D35400",
+    residents: 987,
+    ads: 2156,
+    rating: 4.2,
+    topCategories: ["🚗 Авто", "📱 Электроника", "👕 Одежда", "🛋️ Мебель"],
+    image: "https://readdy.ai/api/search-image?query=Novosibirsk%20train%20station%20winter%20aerial&width=600&height=400",
+    avgPrice: "26 500 ₽",
+    trend: "stable",
+    mapX: 45,
+    mapY: 30,
+    highlights: ["Ж/д вокзал", "Автовокзал"],
+    popularTags: ["вокзал", "транспорт", "проездом"],
+    area: "Железнодорожный",
+  },
+  {
+    id: "kalinin",
+    name: "Калининский",
+    shortName: "Калинин",
+    description: "Спальный район с доступным жильём и хорошей экологией.",
+    icon: "🏙️",
+    color: "#16A085",
+    residents: 1567,
+    ads: 3456,
+    rating: 4.4,
+    topCategories: ["🏠 Недвижимость", "🛋️ Мебель", "👶 Детское", "🚗 Авто"],
+    image: "https://readdy.ai/api/search-image?query=Kalininsky%20Novosibirsk%20residential%20winter%20aerial&width=600&height=400",
+    avgPrice: "27 800 ₽",
+    trend: "up",
+    mapX: 55,
+    mapY: 20,
+    highlights: ["Парк Сосновый бор", "ТРЦ Ройял Парк"],
+    popularTags: ["доступно", "экология", "семейный"],
+    area: "Калининский",
+  },
+  {
+    id: "leninsky",
+    name: "Ленинский",
+    shortName: "Ленинский",
+    description: "Крупнейший район левого берега с развитой инфраструктурой.",
+    icon: "🏢",
+    color: "#8D99AE",
+    residents: 1890,
+    ads: 5120,
+    rating: 4.3,
+    topCategories: ["🏠 Недвижимость", "🚗 Авто", "🛋️ Мебель", "👕 Одежда"],
+    image: "https://readdy.ai/api/search-image?query=Leninsky%20Novosibirsk%20district%20winter%20aerial&width=600&height=400",
+    avgPrice: "30 500 ₽",
+    trend: "stable",
+    mapX: 35,
+    mapY: 62,
+    highlights: ["Площадь Станиславского", "ТРЦ Континент"],
+    popularTags: ["доступно", "развитый", "транспорт"],
+    area: "Ленинский",
   },
 ];
 
@@ -559,12 +835,29 @@ export const getMockDistrictById = (id: string): MockDistrict | undefined => {
   return mockDistricts.find(dist => dist.id === id);
 };
 
+export const getMockDistrictByName = (name: string): MockDistrict | undefined => {
+  return mockDistricts.find(dist => dist.name === name);
+};
+
+export const getTopMockDistricts = (limit: number = 6): MockDistrict[] => {
+  return [...mockDistricts].sort((a, b) => b.ads - a.ads).slice(0, limit);
+};
+
+export const getTrendingMockDistricts = (limit: number = 3): MockDistrict[] => {
+  return [...mockDistricts]
+    .filter(d => d.trend === "up")
+    .sort((a, b) => b.ads - a.ads)
+    .slice(0, limit);
+};
+
 export const getTotalMockStats = () => {
   return {
     totalAds: mockAds.length,
     totalViews: mockAds.reduce((sum, ad) => sum + ad.views, 0),
     avgPrice: Math.round(mockAds.reduce((sum, ad) => sum + (ad.price || 0), 0) / mockAds.length),
     activeSellers: new Set(mockAds.map(ad => ad.seller.id)).size,
+    totalDistricts: mockDistricts.length,
+    totalCategories: mockCategories.length,
   };
 };
 
@@ -584,5 +877,8 @@ export default {
   getFreeMockAds,
   getMockCategoryById,
   getMockDistrictById,
+  getMockDistrictByName,
+  getTopMockDistricts,
+  getTrendingMockDistricts,
   getTotalMockStats,
 };

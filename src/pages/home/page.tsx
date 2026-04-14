@@ -244,10 +244,11 @@ export default function HomePage() {
   const { isDark } = useTheme();
   const { location, district } = useGeoLocation();
   const { ads, loading: adsLoading } = useNearbyAds(
-    location?.lat ?? null,
-    location?.lon ?? null,
-    50
-  );
+  location?.lat ?? null,
+  location?.lon ?? null,
+  { radiusKm: 50 }  // ← ПРАВИЛЬНО
+);
+
   const pageRef = useRef<HTMLDivElement>(null);
   const isPageInView = useInView(pageRef, { once: true });
 

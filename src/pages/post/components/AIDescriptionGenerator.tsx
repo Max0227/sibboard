@@ -13,7 +13,8 @@ import {
   Wand2,
   Copy,
   ThumbsUp,
-  Zap
+  Zap,
+  AlertCircle
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -29,109 +30,22 @@ interface AIDescriptionGeneratorProps {
   onGenerated: (desc: string, price: number) => void;
 }
 
-interface GeneratedData {
-  desc: string;
-  price: number;
-  hashtags: string[];
-  tips: string[];
-}
-
 // ============================================
-// AI-БАЗА ДАННЫХ (расширенная)
+// OPENROUTER КОНФИГУРАЦИЯ
 // ============================================
 
-const AI_DATABASE: Record<string, GeneratedData & { variations: string[] }> = {
-  "Электроника": {
-    desc: "Продаю в отличном состоянии, использовался аккуратно. Все функции работают исправно, без царапин и сколов. Полный комплект: коробка, зарядное устройство, документы. Батарея держит заряд отлично.",
-    price: 25000,
-    hashtags: ["#электроника", "#гаджеты", "#новосибирск"],
-    tips: ["Сделай фото включенного экрана", "Покажи серийный номер", "Укажи дату покупки"],
-    variations: [
-      "Продаю в идеальном состоянии, как новый. Все функции работают безупречно.",
-      "Отличный вариант для тех, кто хочет сэкономить. Состояние на 5+.",
-    ],
-  },
-  "Мебель": {
-    desc: "Продаю в хорошем состоянии, без серьёзных дефектов. Использовалась в жилом помещении, регулярно чистилась. Все механизмы работают исправно. Самовывоз, помогу с разборкой.",
-    price: 15000,
-    hashtags: ["#мебель", "#дом", "#новосибирск"],
-    tips: ["Укажи точные размеры", "Сфотографируй с разных ракурсов", "Напиши причину продажи"],
-    variations: [
-      "Мебель в отличном состоянии, прослужит ещё долго. Все механизмы как новые.",
-      "Продаю за ненадобностью. Состояние хорошее, без сколов и царапин.",
-    ],
-  },
-  "Одежда": {
-    desc: "Продаю вещь в отличном состоянии, носилась несколько раз. Оригинал, все бирки сохранены. Размер соответствует стандартной размерной сетке. Стирка деликатная, форма не потеряна.",
-    price: 3500,
-    hashtags: ["#одежда", "#стиль", "#новосибирск"],
-    tips: ["Укажи точные замеры", "Сфотографируй бирку", "Опиши материал"],
-    variations: [
-      "Вещь в идеальном состоянии, как из магазина. Надевалась пару раз.",
-      "Продаю, потому что не подошёл размер. Вещь новая, все бирки на месте.",
-    ],
-  },
-  "Авто": {
-    desc: "Продаю автомобиль в хорошем техническом состоянии. Регулярное ТО, все работы задокументированы. Кузов без серьёзных повреждений, салон чистый. Один владелец. Полный пакет документов.",
-    price: 850000,
-    hashtags: ["#авто", "#продажаавто", "#новосибирск"],
-    tips: ["Сфотографируй пробег", "Покажи VIN", "Укажи расходы на обслуживание"],
-    variations: [
-      "Автомобиль в отличном состоянии, обслужен, готов к поездкам.",
-      "Продаю в связи с покупкой нового. Машина ухоженная, без вложений.",
-    ],
-  },
-  "Недвижимость": {
-    desc: "Продаётся квартира в хорошем состоянии. Чистый подъезд, развитая инфраструктура, рядом школа, детский сад, магазины. Один взрослый собственник, документы готовы к сделке.",
-    price: 4500000,
-    hashtags: ["#недвижимость", "#квартира", "#новосибирск"],
-    tips: ["Укажи этаж и площадь", "Сфотографируй вид из окна", "Опиши инфраструктуру"],
-    variations: [
-      "Квартира с хорошим ремонтом, заезжай и живи. Все документы готовы.",
-      "Продаю просторную квартиру в хорошем районе. Торг уместен.",
-    ],
-  },
-  "Игры": {
-    desc: "Продаю игру в отличном состоянии. Диск без царапин, коробка целая, все коды активированы/не активированы. Отправка почтой или встреча в центре.",
-    price: 2500,
-    hashtags: ["#игры", "#ps5", "#xbox", "#новосибирск"],
-    tips: ["Сфотографируй диск на свет", "Укажи платформу", "Напиши про онлайн-коды"],
-    variations: [
-      "Игра в идеальном состоянии, пройдена один раз. Диск как новый.",
-      "Продаю коллекционное издание. Все бонусы не активированы.",
-    ],
-  },
-  "Детское": {
-    desc: "Продаю детские вещи в хорошем состоянии. Всё чистое, без пятен и повреждений. Ребёнок вырос, поэтому продаю. Пакетом — скидка.",
-    price: 2000,
-    hashtags: ["#детское", "#длямам", "#новосибирск"],
-    tips: ["Укажи возраст ребёнка", "Сфотографируй без складок", "Напиши про комплектность"],
-    variations: [
-      "Детские вещи в отличном состоянии, всё чистое и аккуратное.",
-      "Продаю пакетом — очень выгодно. Вещи как новые.",
-    ],
-  },
-  "Спорт": {
-    desc: "Продаю спортивный инвентарь в отличном состоянии. Использовался сезон, без дефектов. Самовывоз или встреча по договорённости.",
-    price: 8000,
-    hashtags: ["#спорт", "#фитнес", "#новосибирск"],
-    tips: ["Сфотографируй в действии", "Укажи бренд и модель", "Напиши о состоянии"],
-    variations: [
-      "Спортивный инвентарь в идеальном состоянии. Использовался аккуратно.",
-      "Продаю за ненадобностью. Всё работает отлично, без нареканий.",
-    ],
-  },
-  "default": {
-    desc: "Продаю в отличном состоянии, использовалось аккуратно. Все функции работают исправно. Причина продажи — больше не нужно. Возможен торг при осмотре.",
-    price: 5000,
-    hashtags: ["#продажа", "#новосибирск", "#sibboard"],
-    tips: ["Сделай качественные фото", "Укажи точную цену", "Опиши состояние"],
-    variations: [
-      "Продаю в хорошем состоянии. Все вопросы в личку.",
-      "Отличная вещь, продаю за ненадобностью. Торг уместен.",
-    ],
-  },
-};
+const OPENROUTER_API_KEY = "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";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+// Модели в порядке приоритета
+const MODELS = [
+  "google/gemini-2.0-flash-exp:free",
+  "google/gemini-2.0-flash-001",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "deepseek/deepseek-chat-v3-0324:free",
+  "qwen/qwen2.5-vl-72b-instruct:free",
+  "mistralai/mistral-small-3.1-24b-instruct:free",
+];
 
 const TYPING_SPEED = 12;
 const LOADING_MESSAGES = [
@@ -164,13 +78,19 @@ export default function AIDescriptionGenerator({
   const [done, setDone] = useState(false);
   const [messageIndex, setMessageIndex] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [useAiPhoto, setUseAiPhoto] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentModel, setCurrentModel] = useState(MODELS[0]);
+  const [modelIndex, setModelIndex] = useState(0);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const typingRef = useRef<NodeJS.Timeout | null>(null);
   const messageIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
 
-  // Анимация текста загрузки
+  // ============================================
+  // АНИМАЦИЯ ЗАГРУЗКИ
+  // ============================================
+
   useEffect(() => {
     if (loading) {
       messageIntervalRef.current = setInterval(() => {
@@ -182,9 +102,14 @@ export default function AIDescriptionGenerator({
     }
   }, [loading]);
 
-  // Очистка интервалов
+  // ============================================
+  // ОЧИСТКА
+  // ============================================
+
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
       if (intervalRef.current) clearTimeout(intervalRef.current);
       if (typingRef.current) clearInterval(typingRef.current);
       if (messageIntervalRef.current) clearInterval(messageIntervalRef.current);
@@ -206,50 +131,197 @@ export default function AIDescriptionGenerator({
     }
   }, []);
 
-  const generate = useCallback(() => {
+  // ============================================
+  // ЗАПРОС К OPENROUTER
+  // ============================================
+
+  const callOpenRouter = useCallback(async (modelToUse: string): Promise<string | null> => {
+    try {
+      const systemPrompt = `Ты — Сибиряк AI, эксперт по продажам на доске объявлений в Новосибирске.
+Твоя задача — написать продающее описание для товара.
+
+Правила:
+1. Описание должно быть на русском языке
+2. Используй сибирский колорит (слова "однако", "по-соседски", "сибирский")
+3. Длина: 300-500 символов
+4. Укажи состояние товара: ${condition}
+5. Добавь 3-5 хештегов в конце
+6. Предложи справедливую цену в рублях (отдельно от описания)
+
+Формат ответа:
+ОПИСАНИЕ: [текст описания]
+ЦЕНА: [число]
+ХЕШТЕГИ: [хештеги через пробел]
+СОВЕТЫ: [3 коротких совета через запятую]`;
+
+      const userPrompt = `Напиши продающее описание для товара: "${title}" в категории "${category}". Состояние: ${condition}. ${photos && photos.length > 0 ? 'Есть фотографии.' : ''}`;
+
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "HTTP-Referer": window.location.origin,
+          "X-Title": "SibBoard AI Generator",
+        },
+        body: JSON.stringify({
+          model: modelToUse,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: 800,
+          temperature: 0.8,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(`OpenRouter error with ${modelToUse}:`, response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      return data.choices?.[0]?.message?.content || null;
+    } catch (err) {
+      console.error(`Failed to call ${modelToUse}:`, err);
+      return null;
+    }
+  }, [title, category, condition, photos]);
+
+  // ============================================
+  // ПАРСИНГ ОТВЕТА AI
+  // ============================================
+
+  const parseAIResponse = (response: string): { 
+    description: string; 
+    price: number; 
+    hashtags: string[]; 
+    tips: string[] 
+  } => {
+    let description = "";
+    let price = 5000;
+    const hashtags: string[] = [];
+    const tips: string[] = [];
+
+    const lines = response.split("\n");
+    
+    for (const line of lines) {
+      if (line.toUpperCase().includes("ОПИСАНИЕ:")) {
+        description = line.replace(/ОПИСАНИЕ:/i, "").trim();
+      } else if (line.toUpperCase().includes("ЦЕНА:")) {
+        const priceMatch = line.match(/\d+/);
+        if (priceMatch) {
+          price = parseInt(priceMatch[0]);
+        }
+      } else if (line.toUpperCase().includes("ХЕШТЕГИ:")) {
+        const tagsStr = line.replace(/ХЕШТЕГИ:/i, "").trim();
+        tagsStr.split(/\s+/).forEach(tag => {
+          if (tag.startsWith("#")) hashtags.push(tag);
+        });
+      } else if (line.toUpperCase().includes("СОВЕТЫ:")) {
+        const tipsStr = line.replace(/СОВЕТЫ:/i, "").trim();
+        tipsStr.split(/[.,;]/).forEach(tip => {
+          const trimmed = tip.trim();
+          if (trimmed) tips.push(trimmed);
+        });
+      }
+    }
+
+    // Fallback если не распарсилось
+    if (!description) {
+      description = response;
+    }
+    if (hashtags.length === 0) {
+      hashtags.push("#новосибирск", "#sibboard", "#продажа");
+    }
+    if (tips.length === 0) {
+      tips.push("Сделай качественные фото", "Укажи точную цену", "Будь вежлив с покупателями");
+    }
+
+    return { description, price, hashtags, tips };
+  };
+
+  // ============================================
+  // ГЕНЕРАЦИЯ С FALLBACK
+  // ============================================
+
+  const generateWithAI = useCallback(async (): Promise<{
+    description: string;
+    price: number;
+    hashtags: string[];
+    tips: string[];
+  } | null> => {
+    setError(null);
+
+    for (let i = 0; i < MODELS.length; i++) {
+      const model = MODELS[i];
+      setCurrentModel(model);
+      setModelIndex(i);
+      
+      const response = await callOpenRouter(model);
+      
+      if (response) {
+        return parseAIResponse(response);
+      }
+    }
+
+    return null;
+  }, [callOpenRouter]);
+
+  // ============================================
+  // ЗАПУСК ГЕНЕРАЦИИ
+  // ============================================
+
+  const generate = useCallback(async () => {
     stopTyping();
     setLoading(true);
     setDisplayedText("");
     setDone(false);
     setGeneratedPrice(null);
     setCopied(false);
+    setError(null);
 
-    // Имитация запроса к AI (можно заменить на реальный API)
-    intervalRef.current = setTimeout(() => {
-      const categoryData = AI_DATABASE[category] || AI_DATABASE["default"];
-      
-      // Выбираем случайную вариацию или основное описание
-      const useVariation = Math.random() > 0.5 && categoryData.variations?.length > 0;
-      const baseDesc = useVariation 
-        ? categoryData.variations[Math.floor(Math.random() * categoryData.variations.length)]
-        : categoryData.desc;
-      
-      // Добавляем информацию о фото, если они есть
-      const photoHint = photos && photos.length > 0 
-        ? `\n\n📸 На фото видно состояние. ` 
-        : "";
-      
-      // Формируем полный текст
-      const fullText = `${baseDesc}${photoHint}\n\n📍 ${condition} состояние. ${title ? `«${title}»` : "Товар"} ждёт нового владельца!\n\n${categoryData.hashtags?.join(" ") || ""}`;
-      
-      setLoading(false);
-      setGeneratedPrice(categoryData.price);
-      setGeneratedHashtags(categoryData.hashtags || []);
-      setGeneratedTips(categoryData.tips || []);
+    try {
+      const result = await generateWithAI();
 
-      // Эффект печатающей машинки
-      let i = 0;
-      typingRef.current = setInterval(() => {
-        i++;
-        setDisplayedText(fullText.slice(0, i));
-        if (i >= fullText.length) {
-          clearInterval(typingRef.current!);
-          typingRef.current = null;
-          setDone(true);
-        }
-      }, TYPING_SPEED);
-    }, 2500);
-  }, [category, condition, title, photos, stopTyping]);
+      if (!result) {
+        throw new Error("Не удалось сгенерировать описание");
+      }
+
+      const { description, price, hashtags, tips } = result;
+      
+      const fullText = `${description}\n\n${hashtags.join(" ")}`;
+      
+      if (mountedRef.current) {
+        setLoading(false);
+        setGeneratedPrice(price);
+        setGeneratedHashtags(hashtags);
+        setGeneratedTips(tips);
+
+        // Эффект печатающей машинки
+        let i = 0;
+        typingRef.current = setInterval(() => {
+          i++;
+          setDisplayedText(fullText.slice(0, i));
+          if (i >= fullText.length) {
+            clearInterval(typingRef.current!);
+            typingRef.current = null;
+            setDone(true);
+          }
+        }, TYPING_SPEED);
+      }
+    } catch (err: any) {
+      console.error("Generation error:", err);
+      if (mountedRef.current) {
+        setError(err.message || "Ошибка генерации");
+        setLoading(false);
+      }
+    }
+  }, [stopTyping, generateWithAI]);
+
+  // ============================================
+  // ОБРАБОТЧИКИ
+  // ============================================
 
   const handleApply = useCallback(() => {
     if (generatedPrice !== null && displayedText) {
@@ -274,8 +346,13 @@ export default function AIDescriptionGenerator({
     }
   }, [displayedText]);
 
-  // Определяем, можно ли анализировать фото
-  const canAnalyzePhoto = photos && photos.length > 0;
+  const handleRetry = useCallback(() => {
+    generate();
+  }, [generate]);
+
+  // ============================================
+  // РЕНДЕР
+  // ============================================
 
   return (
     <div>
@@ -296,7 +373,6 @@ export default function AIDescriptionGenerator({
           color: isDark ? "#E6B31E" : "#2563EB",
         }}
       >
-        {/* Анимированный фон */}
         <motion.div
           className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"
           style={{
@@ -317,7 +393,6 @@ export default function AIDescriptionGenerator({
       <AnimatePresence>
         {open && (
           <>
-            {/* Задник */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -326,7 +401,6 @@ export default function AIDescriptionGenerator({
               onClick={handleClose}
             />
 
-            {/* Модалка */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -370,6 +444,12 @@ export default function AIDescriptionGenerator({
                     <div className="text-[#E6B31E] text-xs font-medium">
                       {title ? `«${title.slice(0, 35)}${title.length > 35 ? "…" : ""}»` : "Генерация описания"}
                     </div>
+                    {loading && modelIndex > 0 && (
+                      <div className="text-white/40 text-[10px] mt-0.5 flex items-center gap-1">
+                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                        Резервная модель...
+                      </div>
+                    )}
                   </div>
                   <button
                     onClick={handleClose}
@@ -405,10 +485,25 @@ export default function AIDescriptionGenerator({
                     </div>
                   )}
 
+                  {/* Ошибка */}
+                  {!loading && error && (
+                    <div className="py-8 text-center">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 mb-3">
+                        <AlertCircle className="w-6 h-6 text-red-400" />
+                      </div>
+                      <p className="text-red-400 text-sm mb-4">{error}</p>
+                      <button
+                        onClick={handleRetry}
+                        className="px-4 py-2 rounded-xl bg-[#E6B31E] text-[#0A1828] font-bold text-sm"
+                      >
+                        Попробовать снова
+                      </button>
+                    </div>
+                  )}
+
                   {/* Результат */}
-                  {!loading && (
+                  {!loading && !error && (
                     <>
-                      {/* Сгенерированный текст */}
                       <div className="relative">
                         <div
                           className="rounded-2xl p-5 mb-3 text-sm leading-relaxed text-white/85 bg-white/5 border border-white/10 max-h-[200px] overflow-y-auto"
@@ -424,7 +519,6 @@ export default function AIDescriptionGenerator({
                           )}
                         </div>
                         
-                        {/* Кнопка копирования */}
                         {done && (
                           <motion.button
                             initial={{ opacity: 0 }}
@@ -441,7 +535,6 @@ export default function AIDescriptionGenerator({
                         )}
                       </div>
 
-                      {/* Рекомендуемая цена */}
                       {generatedPrice !== null && done && (
                         <motion.div
                           initial={{ opacity: 0, y: 10 }}
@@ -463,7 +556,6 @@ export default function AIDescriptionGenerator({
                         </motion.div>
                       )}
 
-                      {/* Советы по улучшению */}
                       {done && generatedTips.length > 0 && (
                         <motion.div
                           initial={{ opacity: 0 }}
@@ -486,32 +578,6 @@ export default function AIDescriptionGenerator({
                         </motion.div>
                       )}
 
-                      {/* Анализ фото (если есть) */}
-                      {canAnalyzePhoto && !useAiPhoto && done && (
-                        <motion.button
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          onClick={() => setUseAiPhoto(true)}
-                          className="w-full mb-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 text-sm font-medium flex items-center justify-center gap-2 hover:bg-purple-500/20 transition-colors"
-                        >
-                          <Camera className="w-4 h-4" />
-                          Проанализировать фото с AI
-                        </motion.button>
-                      )}
-
-                      {useAiPhoto && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="mb-3 p-3 rounded-xl bg-purple-500/10 border border-purple-500/20"
-                        >
-                          <p className="text-white/60 text-xs">
-                            📸 AI проанализировал фото: "Товар выглядит аккуратно, без видимых дефектов. Рекомендую добавить фото с разных ракурсов."
-                          </p>
-                        </motion.div>
-                      )}
-
-                      {/* Кнопки действий */}
                       <div className="flex gap-3">
                         <button
                           type="button"
