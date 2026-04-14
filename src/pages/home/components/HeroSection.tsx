@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -15,10 +15,10 @@ import {
   Moon, 
   ArrowRight, 
   ChevronDown,
-  Building2,
   Shield,
   Zap,
-  Star
+  Star,
+  Mountain
 } from "lucide-react";
 
 // ============================================
@@ -34,12 +34,6 @@ interface DistrictWithStats {
   color: string;
   slug: string;
 }
-
-// ============================================
-// ЛЕНИВАЯ ЗАГРУЗКА 3D-ГОРОДА
-// ============================================
-
-import AnimatedBackground from "@/components/feature/AnimatedBackground";
 
 // ============================================
 // КОНСТАНТЫ
@@ -68,22 +62,6 @@ const POPULAR_SEARCHES = [
 ];
 
 // ============================================
-// СКЕЛЕТОН 3D
-// ============================================
-
-const City3DSkeleton = () => (
-  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-[#020C18] to-[#0A1828]">
-    <div className="text-center">
-      <div className="relative">
-        <div className="w-20 h-20 rounded-full border-4 border-[#E6B31E]/20 border-t-[#E6B31E] animate-spin mx-auto mb-4" />
-        <Building2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-[#E6B31E]/50" />
-      </div>
-      <p className="text-white/60 text-sm animate-pulse">Загружаем 3D-город...</p>
-    </div>
-  </div>
-);
-
-// ============================================
 // ОСНОВНОЙ КОМПОНЕНТ
 // ============================================
 
@@ -106,20 +84,18 @@ export default function HeroSection() {
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
   // ============================================
-  // ЗАГРУЗКА ДАННЫХ (ИСПРАВЛЕННЫЙ ЗАПРОС)
+  // ЗАГРУЗКА ДАННЫХ
   // ============================================
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Шаг 1: Получаем список районов
         const { data: districtsData } = await supabase
           .from("districts")
           .select(`id, name`)
           .eq("is_active", true);
 
         if (districtsData && districtsData.length > 0) {
-          // Шаг 2: Для каждого района получаем количество объявлений отдельно
           const enrichedDistricts: DistrictWithStats[] = await Promise.all(
             districtsData.map(async (d: any) => {
               try {
@@ -142,8 +118,7 @@ export default function HeroSection() {
                   count: count || 0,
                   slug: d.name.toLowerCase().replace(/\s+/g, "-"),
                 };
-              } catch (err) {
-                console.error(`Failed to fetch count for ${d.name}:`, err);
+              } catch {
                 const config = DISTRICT_CONFIG[d.name] || { 
                   icon: "📍", color: "#6B7280", shortName: d.name.slice(0, 6) 
                 };
@@ -160,7 +135,6 @@ export default function HeroSection() {
             })
           );
 
-          // Сортируем и берём топ-5
           const sortedDistricts = enrichedDistricts
             .sort((a, b) => b.count - a.count)
             .slice(0, 5);
@@ -168,7 +142,6 @@ export default function HeroSection() {
           setDistricts(sortedDistricts);
         }
 
-        // Общая статистика
         const [{ count: totalAds }, { count: totalUsers }] = await Promise.all([
           supabase.from("ads").select("*", { count: "exact", head: true }).eq("status", "active"),
           supabase.from("users").select("*", { count: "exact", head: true }),
@@ -219,19 +192,16 @@ export default function HeroSection() {
     ? "linear-gradient(180deg, #020C18 0%, #0A1828 60%, #0D2035 100%)"
     : "linear-gradient(180deg, #5BB8E8 0%, #87CEEB 40%, #C8DCA8 100%)";
 
-  const overlayGradient = isDark
-    ? "linear-gradient(to bottom, rgba(2,12,24,0.3) 0%, rgba(10,24,40,0.05) 40%, rgba(10,24,40,0.95) 100%)"
-    : "linear-gradient(to bottom, rgba(135,206,235,0.15) 0%, rgba(184,216,240,0.05) 40%, rgba(212,232,194,0.9) 100%)";
-
   // ============================================
   // РЕНДЕР
   // ============================================
 
   return (
     <section
-  className="relative w-full flex items-center justify-center overflow-hidden"
-  style={{ minHeight: "100vh", background: "transparent" }}
->
+      ref={sectionRef}
+      className="relative w-full flex items-center justify-center overflow-hidden"
+      style={{ minHeight: "100vh", background: bgGradient }}
+    >
       {/* SEO Schema */}
       <script
         type="application/ld+json"
@@ -250,16 +220,17 @@ export default function HeroSection() {
         }}
       />
 
-      {/* Анимированный фон */}
-<Suspense fallback={<City3DSkeleton />}>
-  <AnimatedBackground 
-    activeDistrict={activeDistrict} 
-    onDistrictClick={handleDistrictClick}
-  />
-</Suspense>
-
-      {/* Overlay */}
-      <div className="absolute inset-0 z-10 pointer-events-none" style={{ background: overlayGradient }} />
+      {/* Декоративные элементы фона */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div 
+          className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full opacity-10"
+          style={{ background: "radial-gradient(circle, #E6B31E 0%, transparent 70%)" }}
+        />
+        <div 
+          className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] rounded-full opacity-5"
+          style={{ background: "radial-gradient(circle, #0B4F6C 0%, transparent 70%)" }}
+        />
+      </div>
 
       {/* Theme toggle */}
       <motion.button
@@ -294,6 +265,19 @@ export default function HeroSection() {
       {/* Основной контент */}
       <div className="relative z-20 w-full max-w-[1400px] mx-auto px-4 sm:px-6 flex flex-col items-center text-center pt-24 sm:pt-28 pb-16">
         
+        {/* Логотип */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={isInView ? { opacity: 1, scale: 1 } : {}}
+          transition={{ delay: 0.1 }}
+          className="mb-6"
+        >
+          <div className="inline-flex items-center gap-3 px-5 py-3 rounded-2xl bg-gradient-to-r from-[#E6B31E]/10 to-[#F7A31E]/10 backdrop-blur-xl border border-[#E6B31E]/20">
+            <Mountain className="w-8 h-8 text-[#E6B31E]" />
+            <span className="text-2xl font-black text-white">SIBBOARD</span>
+          </div>
+        </motion.div>
+
         {/* Бейдж */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -310,7 +294,7 @@ export default function HeroSection() {
             className="text-xs sm:text-sm font-bold"
             style={{ color: isDark ? "#E6B31E" : "#0A1828" }}
           >
-            Новосибирск с высоты · {new Date().getFullYear()}
+            Новосибирск · {new Date().getFullYear()}
           </span>
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         </motion.div>
@@ -328,17 +312,8 @@ export default function HeroSection() {
         >
           Покупай и продавай
           <br />
-          <span className="relative">
-            <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 bg-clip-text text-transparent">
-              по-соседски
-            </span>
-            <motion.span
-              className="absolute -right-8 -top-2 text-2xl hidden sm:inline"
-              animate={{ rotate: [0, 15, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              🏘️
-            </motion.span>
+          <span className="bg-gradient-to-r from-amber-400 via-orange-400 to-amber-400 bg-clip-text text-transparent">
+            по-соседски
           </span>
         </motion.h1>
 
@@ -538,7 +513,7 @@ export default function HeroSection() {
               style={{ color: isDark ? "rgba(255,255,255,0.5)" : "rgba(10,24,40,0.5)" }}
             >
               <MapPin className="w-4 h-4 text-[#E6B31E]" />
-              <span>Здания района подсвечены на карте</span>
+              <span>Выбран район {activeDistrict}</span>
               <button
                 onClick={() => setActiveDistrict(null)}
                 className="ml-2 text-[#E6B31E] hover:underline font-semibold"
