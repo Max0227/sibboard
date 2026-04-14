@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/feature/Navbar";
@@ -15,6 +15,14 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { ArrowUp } from "lucide-react";
 
 // ============================================
+// КОНСТАНТЫ
+// ============================================
+
+const SCROLL_THRESHOLD = 500;
+const ADS_SKELETON_COUNT = 8;
+const NEARBY_ADS_CONFIG = { radiusKm: 50, sortBy: "recent", limit: 20 } as const;
+
+// ============================================
 // LAZY LOAD
 // ============================================
 
@@ -28,7 +36,7 @@ const AdsSectionSkeleton = () => (
   <div className="max-w-7xl mx-auto px-4 py-12">
     <div className="h-8 w-64 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg mb-8 animate-pulse" />
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-      {[...Array(8)].map((_, i) => (
+      {[...Array(ADS_SKELETON_COUNT)].map((_, i) => (
         <div key={i} className="rounded-2xl overflow-hidden bg-white/5 border border-white/10">
           <div className="aspect-[4/3] bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 animate-pulse" />
           <div className="p-4 space-y-3">
@@ -43,16 +51,31 @@ const AdsSectionSkeleton = () => (
 );
 
 // ============================================
-// КНОПКА НАВЕРХ
+// КНОПКА НАВЕРХ (С ДЕБАУНСОМ)
 // ============================================
 
 const ScrollToTop = () => {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setVisible(window.scrollY > 500);
-    window.addEventListener("scroll", handleScroll);
+    let ticking = false;
+    
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          setVisible(window.scrollY > SCROLL_THRESHOLD);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   return (
@@ -62,7 +85,7 @@ const ScrollToTop = () => {
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          onClick={scrollToTop}
           className="fixed bottom-24 right-6 z-40 w-12 h-12 rounded-full bg-gradient-to-r from-[#E6B31E] to-[#F7A31E] text-[#0A1828] flex items-center justify-center shadow-xl hover:shadow-2xl transition-all"
           aria-label="Наверх"
         >
@@ -83,100 +106,125 @@ export default function HomePage() {
   const { ads, loading: adsLoading } = useNearbyAds(
     location?.lat ?? null,
     location?.lon ?? null,
-    { radiusKm: 50, sortBy: "recent", limit: 20 }
+    NEARBY_ADS_CONFIG
   );
 
   const pageRef = useRef<HTMLDivElement>(null);
 
   // ============================================
-  // SEO ДАННЫЕ
+  // МЕМОИЗИРОВАННЫЕ SEO ДАННЫЕ
   // ============================================
 
-  const pageTitle = district?.name
-    ? `Объявления в районе ${district.name} | SibBoard Новосибирск`
-    : "SibBoard — доска объявлений Новосибирска | Круче Авито и Юлы";
+  const seoData = useMemo(() => {
+    const districtName = district?.name;
+    const districtSlug = districtName?.toLowerCase().replace(/\s+/g, "-");
+    const adsCount = ads.length;
 
-  const pageDescription = district?.name
-    ? `Купить и продать в районе ${district.name} Новосибирска. ${ads.length} актуальных объявлений. Безопасные сделки, AI-помощник.`
-    : "SibBoard — современная доска объявлений Новосибирска. Голосовые объявления, AI-генератор описаний, безопасные сделки, рейтинг продавцов.";
-
-  const canonicalUrl = district?.name
-    ? `https://sibboard.ru/novosibirsk/${district.name.toLowerCase().replace(/\s+/g, "-")}`
-    : "https://sibboard.ru";
+    return {
+      title: districtName
+        ? `Объявления в районе ${districtName} | SibBoard Новосибирск`
+        : "SibBoard — доска объявлений Новосибирска | Круче Авито и Юлы",
+      description: districtName
+        ? `Купить и продать в районе ${districtName} Новосибирска. ${adsCount} актуальных объявлений. Безопасные сделки, AI-помощник.`
+        : "SibBoard — современная доска объявлений Новосибирска. Голосовые объявления, AI-генератор описаний, безопасные сделки, рейтинг продавцов.",
+      canonical: districtName
+        ? `https://sibboard.ru/novosibirsk/${districtSlug}`
+        : "https://sibboard.ru",
+      districtSlug,
+    };
+  }, [district?.name, ads.length]);
 
   // ============================================
-  // SCHEMA.ORG
+  // МЕМОИЗИРОВАННЫЕ SCHEMA.ORG
   // ============================================
 
-  const websiteSchema = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "SibBoard",
-    "alternateName": ["Сибирская доска объявлений", "SibBoard Новосибирск"],
-    "url": "https://sibboard.ru",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": "https://sibboard.ru/search?q={search_term_string}"
+  const schemas = useMemo(() => {
+    const baseUrl = "https://sibboard.ru";
+    
+    const website = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SibBoard",
+      "alternateName": ["Сибирская доска объявлений", "SibBoard Новосибирск"],
+      "url": baseUrl,
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": `${baseUrl}/search?q={search_term_string}`
+        },
+        "query-input": "required name=search_term_string"
       },
-      "query-input": "required name=search_term_string"
-    },
-    "inLanguage": "ru-RU"
-  };
+      "inLanguage": "ru-RU"
+    };
 
-  const localBusinessSchema = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": "SibBoard Новосибирск",
-    "image": "https://sibboard.ru/og-image.jpg",
-    "@id": "https://sibboard.ru",
-    "url": "https://sibboard.ru",
-    "telephone": "+7-913-706-57-70",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": "Красный проспект, 1",
-      "addressLocality": "Новосибирск",
-      "addressRegion": "Новосибирская область",
-      "postalCode": "630007",
-      "addressCountry": { "@type": "Country", "name": "RU" }
-    },
-    "geo": { "@type": "GeoCoordinates", "latitude": 55.0302, "longitude": 82.9204 },
-    "areaServed": { "@type": "City", "name": "Новосибирск" },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "ratingCount": "12847",
-      "bestRating": "5",
-      "worstRating": "1"
-    }
-  };
+    const localBusiness = {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "SibBoard Новосибирск",
+      "image": `${baseUrl}/og-image.jpg`,
+      "@id": baseUrl,
+      "url": baseUrl,
+      "telephone": "+7-913-706-57-70",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Красный проспект, 1",
+        "addressLocality": "Новосибирск",
+        "addressRegion": "Новосибирская область",
+        "postalCode": "630007",
+        "addressCountry": { "@type": "Country", "name": "RU" }
+      },
+      "geo": { "@type": "GeoCoordinates", "latitude": 55.0302, "longitude": 82.9204 },
+      "areaServed": { "@type": "City", "name": "Новосибирск" },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "12847",
+        "bestRating": "5",
+        "worstRating": "1"
+      }
+    };
 
-  const itemListSchema = ads.length > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "ItemList",
-    "numberOfItems": Math.min(ads.length, 10),
-    "itemListElement": ads.slice(0, 10).map((ad, index) => ({
-      "@type": "ListItem",
-      "position": index + 1,
-      "url": `https://sibboard.ru/ads/${ad.id}`,
-      "name": ad.title
-    }))
-  } : null;
+    const breadcrumb = {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Главная", "item": baseUrl },
+        district?.name ? {
+          "@type": "ListItem",
+          "position": 2,
+          "name": district.name,
+          "item": `${baseUrl}/novosibirsk/${district.name.toLowerCase().replace(/\s+/g, "-")}`
+        } : null
+      ].filter(Boolean)
+    };
 
-  const breadcrumbSchema = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Главная", "item": "https://sibboard.ru" },
-      district?.name ? {
+    const itemList = ads.length > 0 ? {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "numberOfItems": Math.min(ads.length, 10),
+      "itemListElement": ads.slice(0, 10).map((ad, index) => ({
         "@type": "ListItem",
-        "position": 2,
-        "name": district.name,
-        "item": `https://sibboard.ru/novosibirsk/${district.name.toLowerCase().replace(/\s+/g, "-")}`
-      } : null
-    ].filter(Boolean)
-  };
+        "position": index + 1,
+        "url": `${baseUrl}/ads/${ad.id}`,
+        "name": ad.title
+      }))
+    } : null;
+
+    return { website, localBusiness, breadcrumb, itemList };
+  }, [district?.name, ads]);
+
+  // ============================================
+  // ФОН
+  // ============================================
+
+  const backgroundStyle = useMemo(() => ({
+    background: isDark 
+      ? "linear-gradient(180deg, #0A1828 0%, #0D2135 100%)" 
+      : "linear-gradient(180deg, #F0F6FF 0%, #E8F0FE 100%)",
+    minHeight: "100vh",
+    fontFamily: "Nunito, sans-serif",
+  }), [isDark]);
 
   // ============================================
   // РЕНДЕР
@@ -186,8 +234,8 @@ export default function HomePage() {
     <>
       <Helmet>
         <html lang="ru" />
-        <title>{pageTitle}</title>
-        <meta name="description" content={pageDescription} />
+        <title>{seoData.title}</title>
+        <meta name="description" content={seoData.description} />
         <meta name="keywords" content="объявления Новосибирск, доска объявлений, купить Новосибирск, продать Новосибирск, SibBoard" />
         <meta name="robots" content="index, follow, max-image-preview:large" />
         <meta name="geo.region" content="RU-NVS" />
@@ -195,22 +243,22 @@ export default function HomePage() {
         <meta name="geo.position" content="55.0302;82.9204" />
         <meta name="ICBM" content="55.0302, 82.9204" />
         
-        <link rel="canonical" href={canonicalUrl} />
+        <link rel="canonical" href={seoData.canonical} />
         <link rel="alternate" href="https://sibboard.ru" hrefLang="ru" />
         <link rel="alternate" href="https://sibboard.ru/en" hrefLang="en" />
         <link rel="alternate" href="https://sibboard.ru" hrefLang="x-default" />
         
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="SibBoard" />
-        <meta property="og:title" content={pageTitle} />
-        <meta property="og:description" content={pageDescription} />
-        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:title" content={seoData.title} />
+        <meta property="og:description" content={seoData.description} />
+        <meta property="og:url" content={seoData.canonical} />
         <meta property="og:image" content="https://sibboard.ru/og-image.jpg" />
         <meta property="og:locale" content="ru_RU" />
         
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={pageTitle} />
-        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:title" content={seoData.title} />
+        <meta name="twitter:description" content={seoData.description} />
         <meta name="twitter:image" content="https://sibboard.ru/og-image.jpg" />
         
         <meta name="format-detection" content="telephone=no" />
@@ -222,32 +270,20 @@ export default function HomePage() {
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="//bnelnjawwqdvhhxeiqrt.supabase.co" />
         
-        <script type="application/ld+json">{JSON.stringify(websiteSchema)}</script>
-        <script type="application/ld+json">{JSON.stringify(localBusinessSchema)}</script>
-        <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
-        {itemListSchema && <script type="application/ld+json">{JSON.stringify(itemListSchema)}</script>}
+        <script type="application/ld+json">{JSON.stringify(schemas.website)}</script>
+        <script type="application/ld+json">{JSON.stringify(schemas.localBusiness)}</script>
+        <script type="application/ld+json">{JSON.stringify(schemas.breadcrumb)}</script>
+        {schemas.itemList && <script type="application/ld+json">{JSON.stringify(schemas.itemList)}</script>}
       </Helmet>
 
-      <JsonLd schema={websiteSchema} />
-      <JsonLd schema={localBusinessSchema} />
-      <JsonLd schema={breadcrumbSchema} />
-      {itemListSchema && <JsonLd schema={itemListSchema} />}
+      <JsonLd schema={schemas.website} />
+      <JsonLd schema={schemas.localBusiness} />
+      <JsonLd schema={schemas.breadcrumb} />
+      {schemas.itemList && <JsonLd schema={schemas.itemList} />}
 
-      <div 
-        ref={pageRef}
-        className="relative"
-        style={{ 
-          background: isDark 
-            ? "linear-gradient(180deg, #0A1828 0%, #0D2135 100%)" 
-            : "linear-gradient(180deg, #F0F6FF 0%, #E8F0FE 100%)", 
-          minHeight: "100vh", 
-          fontFamily: "Nunito, sans-serif" 
-        }}
-        itemScope
-        itemType="https://schema.org/WebPage"
-      >
+      <div ref={pageRef} className="relative" style={backgroundStyle} itemScope itemType="https://schema.org/WebPage">
         <meta itemProp="name" content="SibBoard Новосибирск" />
-        <meta itemProp="description" content={pageDescription} />
+        <meta itemProp="description" content={seoData.description} />
         
         <Navbar transparent />
         
