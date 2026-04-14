@@ -229,10 +229,9 @@ export default function HeroSection() {
 
   return (
     <section
-      ref={sectionRef}
-      className="relative w-full flex items-center justify-center overflow-hidden"
-      style={{ minHeight: "100vh", background: bgGradient }}
-    >
+  className="relative w-full flex items-center justify-center overflow-hidden"
+  style={{ minHeight: "100vh", background: "transparent" }}
+>
       {/* SEO Schema */}
       <script
         type="application/ld+json"

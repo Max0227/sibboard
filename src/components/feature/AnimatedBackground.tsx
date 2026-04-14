@@ -559,7 +559,7 @@ export default function AnimatedBackground({ activeDistrict }: AnimatedBackgroun
   };
 
   return (
-    <div className="fixed inset-0 w-full h-full overflow-hidden -z-10">
+    <div className="fixed inset-0 w-full h-full overflow-hidden -z-0">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
 
       {/* Индикатор времени суток */}
