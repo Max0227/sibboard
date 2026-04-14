@@ -70,7 +70,16 @@ export default defineConfig({
   base,
   build: {
     sourcemap: true,
-    outDir: 'dist',  // ← изменил с 'out' на 'dist'
+    outDir: 'dist',
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+      },
+    },
   },
   resolve: {
     alias: {
