@@ -34,7 +34,7 @@ interface AIDescriptionGeneratorProps {
 // OPENROUTER КОНФИГУРАЦИЯ
 // ============================================
 
-const OPENROUTER_API_KEY = "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";
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY || "";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 // Модели в порядке приоритета
