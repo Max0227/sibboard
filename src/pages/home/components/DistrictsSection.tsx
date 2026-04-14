@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@/contexts/ThemeContext";
-import { supabase, type District } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { 
   MapPin, 
   TrendingUp, 
@@ -18,91 +18,36 @@ import {
   Navigation,
   Loader2,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Image as ImageIcon
 } from "lucide-react";
+import { DISTRICT_COLORS, DISTRICT_ICONS, DISTRICT_DESCRIPTIONS, DISTRICT_HIGHLIGHTS, MAP_POSITIONS, DISTRICT_IMAGES } from "@/mocks/districts";
 
 // ============================================
 // ТИПЫ
 // ============================================
 
-interface DistrictWithStats extends District {
+interface DistrictWithStats {
+  id: string;
+  name: string;
+  short_name: string;
+  icon: string;
+  color: string;
+  description: string;
   ads_count: number;
   avg_price: number;
   rating: number;
   top_categories: Array<{ id: number; name: string; icon: string }>;
-  color: string;
-  icon: string;
-  short_name: string;
-  description: string;
+  image_url: string | null;
   map_x: number;
   map_y: number;
   highlights: string[];
   sellers_count: number;
+  area?: string;
 }
 
 // ============================================
-// КОНСТАНТЫ
-// ============================================
-
-const DISTRICT_COLORS: Record<string, string> = {
-  "Центральный": "#E6B31E",
-  "Железнодорожный": "#E63946",
-  "Заельцовский": "#2A9D8F",
-  "Дзержинский": "#E76F51",
-  "Октябрьский": "#6D597A",
-  "Калининский": "#264653",
-  "Кировский": "#2B2D42",
-  "Ленинский": "#8D99AE",
-  "Советский": "#457B9D",
-  "Первомайский": "#1D3557",
-};
-
-const DISTRICT_ICONS: Record<string, string> = {
-  "Центральный": "🏛️",
-  "Железнодорожный": "🚂",
-  "Заельцовский": "🌲",
-  "Дзержинский": "🏭",
-  "Октябрьский": "🌉",
-  "Калининский": "🏗️",
-  "Кировский": "🏙️",
-  "Ленинский": "🏢",
-  "Советский": "🔬",
-  "Первомайский": "🌳",
-};
-
-const DISTRICT_DESCRIPTIONS: Record<string, string> = {
-  "Центральный": "Исторический и деловой центр Новосибирска",
-  "Железнодорожный": "Вокзал, транспортная развязка",
-  "Заельцовский": "Зелёная зона, Заельцовский парк",
-  "Дзержинский": "Промышленный район с развитой инфраструктурой",
-  "Октябрьский": "Престижный район, набережная Оби",
-  "Калининский": "Спальный район с доступным жильём",
-  "Кировский": "Левобережье, промышленность и жилые кварталы",
-  "Ленинский": "Крупнейший район левого берега",
-  "Советский": "Академгородок, научный центр",
-  "Первомайский": "Частный сектор, близость к природе",
-};
-
-const MAP_POSITIONS: Record<string, { x: number; y: number }> = {
-  "Центральный": { x: 52, y: 42 },
-  "Железнодорожный": { x: 48, y: 48 },
-  "Заельцовский": { x: 55, y: 32 },
-  "Дзержинский": { x: 62, y: 38 },
-  "Октябрьский": { x: 58, y: 50 },
-  "Калининский": { x: 45, y: 28 },
-  "Кировский": { x: 40, y: 58 },
-  "Ленинский": { x: 35, y: 65 },
-  "Советский": { x: 68, y: 72 },
-  "Первомайский": { x: 72, y: 45 },
-};
-
-const CATEGORY_ICONS: Record<number, string> = {
-  1: "🚗", 2: "🏠", 3: "📱", 4: "👕", 5: "🛋️",
-  6: "🎮", 7: "👶", 8: "🚲", 9: "🐕", 10: "💼",
-};
-
-// ============================================
-// КАРТОЧКА РАЙОНА
+// КАРТОЧКА РАЙОНА С ФОТО
 // ============================================
 
 function DistrictCard({ 
@@ -119,11 +64,18 @@ function DistrictCard({
   const { isDark } = useTheme();
   const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleViewAds = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/search?district=${encodeURIComponent(district.name)}`);
   };
+
+  // Фото района (реальное или fallback)
+  const districtImage = district.image_url || 
+    DISTRICT_IMAGES[district.name] || 
+    `https://readdy.ai/api/search-image?query=${encodeURIComponent(district.name)}%20Novosibirsk%20aerial&width=600&height=400`;
 
   return (
     <motion.div
@@ -135,12 +87,11 @@ function DistrictCard({
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className="relative cursor-pointer group"
+      className="relative cursor-pointer group h-full"
     >
       <div
-        className="relative rounded-3xl overflow-hidden backdrop-blur-xl transition-all duration-300"
+        className="relative rounded-3xl overflow-hidden backdrop-blur-xl transition-all duration-300 h-full flex flex-col"
         style={{
-          minHeight: 380,
           border: isActive ? `2px solid ${district.color}` : "2px solid transparent",
           boxShadow: isActive 
             ? `0 20px 40px -12px ${district.color}40` 
@@ -152,68 +103,61 @@ function DistrictCard({
             : "linear-gradient(145deg, rgba(255,255,255,0.95), rgba(248,250,252,0.95))",
         }}
       >
-        {/* Декоративный градиент */}
-        <div 
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-          style={{
-            background: `radial-gradient(circle at 30% 20%, ${district.color}20, transparent 60%)`,
-          }}
-        />
-
-        <div className="relative z-10 p-6 flex flex-col h-full">
-          {/* Заголовок */}
-          <div className="flex items-start justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <motion.div
-                animate={isHovered ? { rotate: [0, -5, 5, 0] } : {}}
-                transition={{ duration: 0.4 }}
-                className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
-                style={{ 
-                  background: `${district.color}20`,
-                  border: `1px solid ${district.color}40`,
-                }}
-              >
-                {district.icon}
-              </motion.div>
-              <div>
-                <h3 
-                  className="text-xl font-black"
-                  style={{ 
-                    fontFamily: "Nunito, sans-serif",
-                    color: isDark ? "#FFFFFF" : "#1A1A2E"
-                  }}
-                >
-                  {district.name}
-                </h3>
-                <p 
-                  className="text-xs opacity-60"
-                  style={{ 
-                    fontFamily: "Nunito, sans-serif",
-                    color: isDark ? "#FFFFFF" : "#1A1A2E"
-                  }}
-                >
-                  {district.description}
-                </p>
-              </div>
+        {/* Фото района */}
+        <div className="relative w-full h-40 overflow-hidden">
+          {!imageLoaded && !imageError && (
+            <div className="absolute inset-0 bg-white/5 animate-pulse flex items-center justify-center">
+              <ImageIcon className="w-8 h-8 text-white/20" />
             </div>
-            
-            {/* Active badge */}
-            <AnimatePresence>
-              {isActive && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.5 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.5 }}
-                  className="px-3 py-1 rounded-full text-xs font-bold text-white"
-                  style={{ background: district.color }}
-                >
-                  <Sparkles className="w-3 h-3 inline mr-1" />
-                  Выбран
-                </motion.div>
-              )}
-            </AnimatePresence>
+          )}
+          {!imageError ? (
+            <img
+              src={districtImage}
+              alt={district.name}
+              className={`w-full h-full object-cover transition-transform duration-700 ${
+                isHovered ? "scale-110" : "scale-100"
+              } ${imageLoaded ? "opacity-100" : "opacity-0"}`}
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-900">
+              <Building2 className="w-12 h-12 text-white/30" />
+            </div>
+          )}
+          
+          {/* Градиент поверх фото */}
+          <div 
+            className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"
+          />
+          
+          {/* Название района на фото */}
+          <div className="absolute bottom-3 left-4 right-4">
+            <h3 className="text-white text-xl font-black drop-shadow-lg">
+              {district.name}
+            </h3>
           </div>
 
+          {/* Active badge */}
+          <AnimatePresence>
+            {isActive && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                className="absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold text-white"
+                style={{ background: district.color }}
+              >
+                <Sparkles className="w-3 h-3 inline mr-1" />
+                Выбран
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Контент */}
+        <div className="p-5 flex-1 flex flex-col">
           {/* Статистика */}
           <div className="grid grid-cols-2 gap-3 mb-4">
             <div 
@@ -224,7 +168,7 @@ function DistrictCard({
                 <Package className="w-4 h-4" style={{ color: district.color }} />
                 <span className="text-xs opacity-60">Объявлений</span>
               </div>
-              <div className="text-2xl font-black" style={{ color: isDark ? "#FFF" : "#1A1A2E" }}>
+              <div className="text-xl font-black" style={{ color: isDark ? "#FFF" : "#1A1A2E" }}>
                 {district.ads_count.toLocaleString()}
               </div>
             </div>
@@ -236,13 +180,13 @@ function DistrictCard({
                 <Users className="w-4 h-4" style={{ color: district.color }} />
                 <span className="text-xs opacity-60">Продавцов</span>
               </div>
-              <div className="text-2xl font-black" style={{ color: isDark ? "#FFF" : "#1A1A2E" }}>
+              <div className="text-xl font-black" style={{ color: isDark ? "#FFF" : "#1A1A2E" }}>
                 {district.sellers_count.toLocaleString()}
               </div>
             </div>
           </div>
 
-          {/* Рейтинг и средняя цена */}
+          {/* Рейтинг и цена */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((s) => (
@@ -257,7 +201,7 @@ function DistrictCard({
             </div>
             <div className="text-right">
               <div className="text-xs opacity-60">Средняя цена</div>
-              <div className="text-lg font-black" style={{ color: district.color }}>
+              <div className="text-base font-black" style={{ color: district.color }}>
                 {district.avg_price > 0 ? `${Math.round(district.avg_price / 1000)}k ₽` : "—"}
               </div>
             </div>
@@ -342,7 +286,6 @@ function DistrictMapDot({
       whileHover={{ scale: 1.2 }}
     >
       <div className="relative">
-        {/* Пульсирующее кольцо */}
         {isActive && (
           <motion.div
             className="absolute rounded-full"
@@ -353,7 +296,6 @@ function DistrictMapDot({
           />
         )}
         
-        {/* Точка */}
         <div
           className="w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-lg transition-all"
           style={{
@@ -365,7 +307,6 @@ function DistrictMapDot({
           {isActive && "📍"}
         </div>
         
-        {/* Тултип */}
         <div
           className="absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none shadow-xl"
           style={{ 
@@ -390,28 +331,23 @@ const DistrictSkeleton = ({ isDark }: { isDark: boolean }) => (
     {[...Array(3)].map((_, i) => (
       <div
         key={i}
-        className="rounded-3xl p-6 animate-pulse"
+        className="rounded-3xl overflow-hidden animate-pulse"
         style={{
-          minHeight: 380,
           background: isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)",
           border: isDark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(0,0,0,0.04)",
         }}
       >
-        <div className="flex gap-3 mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/10" />
-          <div className="flex-1">
-            <div className="h-6 w-24 bg-white/10 rounded mb-2" />
-            <div className="h-3 w-32 bg-white/5 rounded" />
+        <div className="h-40 bg-white/10" />
+        <div className="p-5 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="h-16 rounded-xl bg-white/5" />
+            <div className="h-16 rounded-xl bg-white/5" />
           </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="h-16 rounded-xl bg-white/5" />
-          <div className="h-16 rounded-xl bg-white/5" />
-        </div>
-        <div className="h-8 w-full bg-white/5 rounded-xl mb-4" />
-        <div className="flex gap-2 mt-auto">
-          <div className="flex-1 h-10 rounded-xl bg-white/10" />
-          <div className="w-10 h-10 rounded-xl bg-white/10" />
+          <div className="h-6 w-32 bg-white/5 rounded" />
+          <div className="flex gap-2">
+            <div className="flex-1 h-10 rounded-xl bg-white/10" />
+            <div className="w-10 h-10 rounded-xl bg-white/10" />
+          </div>
         </div>
       </div>
     ))}
@@ -435,7 +371,7 @@ export default function DistrictsSection() {
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
 
   // ============================================
-  // ЗАГРУЗКА ДАННЫХ (ИСПРАВЛЕННЫЙ ЗАПРОС)
+  // ЗАГРУЗКА ДАННЫХ ИЗ SUPABASE
   // ============================================
 
   useEffect(() => {
@@ -444,16 +380,16 @@ export default function DistrictsSection() {
       setError(null);
       
       try {
-        // Шаг 1: Получаем список районов
+        // Получаем районы из Supabase
         const { data: districtsData, error: districtsError } = await supabase
           .from("districts")
-          .select(`id, name, area, center_lat, center_lon, is_active, created_at`)
-          .eq("is_active", true);
+          .select(`*`)
+          .eq("is_active", true)
+          .order("name");
 
         if (districtsError) throw districtsError;
         
         if (districtsData && districtsData.length > 0) {
-          // Шаг 2: Для каждого района получаем статистику отдельными запросами
           const enrichedDistricts: DistrictWithStats[] = await Promise.all(
             districtsData.map(async (d: any) => {
               try {
@@ -502,47 +438,64 @@ export default function DistrictsSection() {
                   }
                 });
                 
+                const categoryNames: Record<number, string> = {
+                  1: "Авто", 2: "Недвижимость", 3: "Электроника", 4: "Одежда",
+                  5: "Мебель", 6: "Игры", 7: "Детское", 8: "Спорт",
+                  9: "Животные", 10: "Услуги",
+                };
+                
+                const categoryIcons: Record<number, string> = {
+                  1: "🚗", 2: "🏠", 3: "📱", 4: "👕",
+                  5: "🛋️", 6: "🎮", 7: "👶", 8: "🚲",
+                  9: "🐕", 10: "💼",
+                };
+                
                 const topCategories = Object.entries(categoryCounts)
                   .sort(([, a], [, b]) => b - a)
                   .slice(0, 3)
-                  .map(([id]) => ({
+                  .map(([id, count]) => ({
                     id: parseInt(id),
-                    name: getCategoryName(parseInt(id)),
-                    icon: CATEGORY_ICONS[parseInt(id)] || "📦",
+                    name: categoryNames[parseInt(id)] || `Категория ${id}`,
+                    icon: categoryIcons[parseInt(id)] || "📦",
                   }));
 
                 return {
-                  ...d,
+                  id: d.id.toString(),
+                  name: d.name,
+                  short_name: d.name.split(" ")[0],
+                  icon: DISTRICT_ICONS[d.name] || "📍",
+                  color: DISTRICT_COLORS[d.name] || "#6B7280",
+                  description: DISTRICT_DESCRIPTIONS[d.name] || d.description || `${d.area || "Район"} Новосибирска`,
                   ads_count: adsCount || 0,
                   avg_price: avgPrice,
-                  rating: 4.3 + Math.random() * 0.6,
+                  rating: 4.2 + Math.random() * 0.7,
                   top_categories: topCategories,
-                  sellers_count: uniqueSellers || Math.floor(Math.random() * 300) + 100,
-                  color: DISTRICT_COLORS[d.name] || "#6B7280",
-                  icon: DISTRICT_ICONS[d.name] || "📍",
-                  short_name: d.name.split(" ")[0],
-                  description: DISTRICT_DESCRIPTIONS[d.name] || `${d.area || "Район"} Новосибирска`,
+                  image_url: d.image_url || DISTRICT_IMAGES[d.name] || null,
                   map_x: MAP_POSITIONS[d.name]?.x || 50,
                   map_y: MAP_POSITIONS[d.name]?.y || 50,
-                  highlights: [],
+                  highlights: DISTRICT_HIGHLIGHTS[d.name] || [],
+                  sellers_count: uniqueSellers || Math.floor(Math.random() * 300) + 100,
+                  area: d.area,
                 };
               } catch (err) {
                 console.error(`Failed to fetch stats for ${d.name}:`, err);
-                // Возвращаем базовые данные при ошибке
                 return {
-                  ...d,
+                  id: d.id.toString(),
+                  name: d.name,
+                  short_name: d.name.split(" ")[0],
+                  icon: DISTRICT_ICONS[d.name] || "📍",
+                  color: DISTRICT_COLORS[d.name] || "#6B7280",
+                  description: DISTRICT_DESCRIPTIONS[d.name] || `${d.area || "Район"} Новосибирска`,
                   ads_count: 0,
                   avg_price: 0,
                   rating: 4.5,
                   top_categories: [],
-                  sellers_count: 0,
-                  color: DISTRICT_COLORS[d.name] || "#6B7280",
-                  icon: DISTRICT_ICONS[d.name] || "📍",
-                  short_name: d.name.split(" ")[0],
-                  description: DISTRICT_DESCRIPTIONS[d.name] || `${d.area || "Район"} Новосибирска`,
+                  image_url: d.image_url || DISTRICT_IMAGES[d.name] || null,
                   map_x: MAP_POSITIONS[d.name]?.x || 50,
                   map_y: MAP_POSITIONS[d.name]?.y || 50,
-                  highlights: [],
+                  highlights: DISTRICT_HIGHLIGHTS[d.name] || [],
+                  sellers_count: 0,
+                  area: d.area,
                 };
               }
             })
@@ -562,15 +515,6 @@ export default function DistrictsSection() {
 
     fetchDistricts();
   }, [retryCount]);
-
-  // Получение названия категории
-  const getCategoryName = (id: number): string => {
-    const names: Record<number, string> = {
-      1: "Авто", 2: "Недвижимость", 3: "Электроника", 4: "Одежда",
-      5: "Мебель", 6: "Игры", 7: "Детское", 8: "Спорт", 9: "Животные", 10: "Услуги"
-    };
-    return names[id] || `Категория ${id}`;
-  };
 
   const handleDistrictToggle = (name: string) => {
     setActiveDistrict((prev) => (prev === name ? null : name));
@@ -601,34 +545,6 @@ export default function DistrictsSection() {
       className="relative py-20 sm:py-28 px-4 sm:px-6 overflow-hidden transition-colors duration-300"
       style={{ background: isDark ? "#0A1828" : "#F0F6FF" }}
     >
-      {/* SEO Schema */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "ItemList",
-            "name": "Районы Новосибирска",
-            "description": "Список районов Новосибирска с объявлениями на SibBoard",
-            "numberOfItems": districts.length,
-            "itemListElement": districts.map((d, i) => ({
-              "@type": "ListItem",
-              "position": i + 1,
-              "item": {
-                "@type": "Place",
-                "name": d.name,
-                "description": d.description,
-                "address": {
-                  "@type": "PostalAddress",
-                  "addressLocality": "Новосибирск",
-                  "addressRegion": d.name
-                }
-              }
-            }))
-          })
-        }}
-      />
-
       {/* Декоративный фон */}
       <div className="absolute inset-0 pointer-events-none">
         <div 
@@ -804,9 +720,6 @@ export default function DistrictsSection() {
               <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full opacity-40">
                 <path d="M30,35 Q40,40 50,38 Q60,36 70,42" stroke={isDark ? "#4A9EBF" : "#3A8FBF"} strokeWidth="3" fill="none" strokeLinecap="round" />
                 <path d="M28,45 Q40,50 55,47 Q65,44 72,50" stroke={isDark ? "#4A9EBF" : "#3A8FBF"} strokeWidth="2" fill="none" opacity="0.5" />
-                <path d="M45,25 L60,25 L65,40 L55,45 L45,40 Z" fill={isDark ? "#E6B31E20" : "#2563EB15"} stroke={isDark ? "#E6B31E40" : "#2563EB30"} strokeWidth="1" />
-                <path d="M35,40 L50,45 L45,60 L30,55 Z" fill={isDark ? "#E6394620" : "#7C3AED15"} stroke={isDark ? "#E6394640" : "#7C3AED30"} strokeWidth="1" />
-                <path d="M55,50 L70,55 L65,70 L50,65 Z" fill={isDark ? "#2A9D8F20" : "#10B98115"} stroke={isDark ? "#2A9D8F40" : "#10B98130"} strokeWidth="1" />
               </svg>
               
               <div className="absolute top-4 left-4 z-10">
@@ -866,7 +779,7 @@ export default function DistrictsSection() {
               <MapPin className="w-8 h-8 text-white/30" />
             </div>
             <h3 className="text-xl font-semibold text-white mb-2">Районы не найдены</h3>
-            <p className="text-white/60 text-sm">Попробуйте позже</p>
+            <p className="text-white/60 text-sm">Добавьте районы в базу данных</p>
           </motion.div>
         ) : (
           <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
